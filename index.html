@@ -328,6 +328,13 @@ body {
   .roll-btn { width: 120px; height: 120px; }
   .roll-text { font-size: 52px; }
   .dice-display { gap: 12px; }
+  /* 6点单独优化：缩小边距让6个点更分散 */
+  .face-6 .d1 { top: 8px; left: 8px; }
+  .face-6 .d2 { top: 50%; left: 8px; transform: translateY(-50%); }
+  .face-6 .d3 { bottom: 8px; left: 8px; }
+  .face-6 .d4 { top: 8px; right: 8px; }
+  .face-6 .d5 { top: 50%; right: 8px; transform: translateY(-50%); }
+  .face-6 .d6 { bottom: 8px; right: 8px; }
 }
 </style>
 </head>
