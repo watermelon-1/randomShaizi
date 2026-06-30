@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随机骰子</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.container {
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+/* ====== 骰子数量选择区 ====== */
+.dice-count-label {
+  color: #e0e0e0;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+.dice-count-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.count-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.count-btn:hover {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: rgba(255, 215, 0, 0.7);
+  transform: translateY(-2px);
+}
+
+.count-btn.active {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  border-color: #ffd700;
+  color: #1a1a2e;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+  animation: pulse-gold 2s infinite;
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4); }
+  50% { box-shadow: 0 8px 35px rgba(255, 215, 0, 0.7); }
+}
+
+/* ====== 骰子展示区 ====== */
+.dice-display {
+  width: 100%;
+  min-height: 180px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+}
+
+/* 3D 骰子容器 */
+.dice-scene {
+  width: 90px;
+  height: 90px;
+  perspective: 500px;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5));
+}
+
+.dice {
+  width: 90px;
+  height: 90px;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateY(0deg);
+}
+
+/* 滚动中：快速过渡让切换流畅 */
+.dice.rolling {
+  transition: transform 0.05s linear;
+}
+
+/* 骰子面 */
+.face {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #f5f0e8 0%, #e8dfd0 30%, #d9cfba 100%);
+  border: 3px solid #6b5b4f;
+  box-shadow:
+    inset 0 0 12px rgba(0, 0, 0, 0.15),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 面内圈倒角高光 */
+.face::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 11px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* 点数圆点 - 深色凹陷质感 */
+.dot {
+  width: 18px;
+  height: 18px;
+  background: radial-gradient(circle at 45% 35%, #3a3028 0%, #1a1410 100%);
+  border-radius: 50%;
+  position: absolute;
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 各面3D定位 */
+.face-front  { transform: translateZ(45px); }
+.face-back   { transform: rotateY(180deg) translateZ(45px); }
+.face-right  { transform: rotateY(90deg) translateZ(45px); }
+.face-left   { transform: rotateY(-90deg) translateZ(45px); }
+.face-top    { transform: rotateX(90deg) translateZ(45px); }
+.face-bottom { transform: rotateX(-90deg) translateZ(45px); }
+
+/* 点数位置 - 1点(中心) */
+.face-1 .d1 { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+/* 2点(对角) */
+.face-2 .d1 { top: 14px; right: 14px; }
+.face-2 .d2 { bottom: 14px; left: 14px; }
+
+/* 3点(对角线+中心) */
+.face-3 .d1 { top: 14px; right: 14px; }
+.face-3 .d2 { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.face-3 .d3 { bottom: 14px; left: 14px; }
+
+/* 4点(四个角) */
+.face-4 .d1 { top: 14px; left: 14px; }
+.face-4 .d2 { top: 14px; right: 14px; }
+.face-4 .d3 { bottom: 14px; left: 14px; }
+.face-4 .d4 { bottom: 14px; right: 14px; }
+
+/* 5点(四角+中心) */
+.face-5 .d1 { top: 14px; left: 14px; }
+.face-5 .d2 { top: 14px; right: 14px; }
+.face-5 .d3 { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.face-5 .d4 { bottom: 14px; left: 14px; }
+.face-5 .d5 { bottom: 14px; right: 14px; }
+
+/* 6点(两列各3) */
+.face-6 .d1 { top: 14px; left: 14px; }
+.face-6 .d2 { top: 50%; left: 14px; transform: translateY(-50%); }
+.face-6 .d3 { bottom: 14px; left: 14px; }
+.face-6 .d4 { top: 14px; right: 14px; }
+.face-6 .d5 { top: 50%; right: 14px; transform: translateY(-50%); }
+.face-6 .d6 { bottom: 14px; right: 14px; }
+
+/* 定格弹跳 - 放在外层容器上，不影响dice的transform */
+.dice-scene.bounce {
+  animation: bounce-settle 0.35s ease-out;
+}
+
+@keyframes bounce-settle {
+  0%   { transform: scale(1.18); }
+  35%  { transform: scale(0.90); }
+  65%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* ====== 摇按钮 ====== */
+.roll-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.roll-btn {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  background: radial-gradient(circle at 40% 35%, #e6c860 0%, #d4a520 25%, #b8860b 60%, #8b6508 100%);
+  box-shadow:
+    0 8px 25px rgba(180, 130, 20, 0.35),
+    0 0 40px rgba(160, 110, 10, 0.15),
+    inset 0 -6px 15px rgba(0, 0, 0, 0.25),
+    inset 0 6px 15px rgba(255, 255, 255, 0.2);
+  transition: all 0.3s;
+  overflow: hidden;
+}
+
+.roll-btn::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 60%);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { transform: translate(-30%, -30%) rotate(0deg); }
+  50% { transform: translate(-10%, -10%) rotate(180deg); }
+}
+
+.roll-btn:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 12px 35px rgba(180, 130, 20, 0.45),
+    0 0 50px rgba(160, 110, 10, 0.2),
+    inset 0 -6px 15px rgba(0, 0, 0, 0.25),
+    inset 0 6px 15px rgba(255, 255, 255, 0.2);
+}
+
+.roll-btn:active {
+  transform: scale(0.93);
+}
+
+.roll-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: scale(0.93) !important;
+}
+
+.roll-text {
+  position: relative;
+  z-index: 1;
+  font-size: 68px;
+  font-weight: 900;
+  /* 实心填充：暖金色 + 降低光晕亮度 */
+  color: #f5e6c8;
+  text-shadow:
+    0 0 5px rgba(200, 150, 30, 0.5),
+    0 0 12px rgba(180, 120, 20, 0.3),
+    0 3px 0 #8b5e3c,
+    0 4px 0 #6b3f1f,
+    0 5px 8px rgba(0, 0, 0, 0.5),
+    2px 6px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 4px;
+  user-select: none;
+  line-height: 1;
+}
+
+/* ====== 响应式 ====== */
+@media (max-width: 420px) {
+  .dice-scene, .dice, .face {
+    width: 70px;
+    height: 70px;
+  }
+  .face-front  { transform: translateZ(35px); }
+  .face-back   { transform: rotateY(180deg) translateZ(35px); }
+  .face-right  { transform: rotateY(90deg) translateZ(35px); }
+  .face-left   { transform: rotateY(-90deg) translateZ(35px); }
+  .face-top    { transform: rotateX(90deg) translateZ(35px); }
+  .face-bottom { transform: rotateX(-90deg) translateZ(35px); }
+  .dot { width: 14px; height: 14px; }
+  .roll-btn { width: 120px; height: 120px; }
+  .roll-text { font-size: 52px; }
+  .dice-display { gap: 12px; }
+  .face-2 .d1, .face-2 .d2,
+  .face-3 .d1, .face-3 .d3,
+  .face-4 .d1, .face-4 .d2, .face-4 .d3, .face-4 .d4,
+  .face-5 .d1, .face-5 .d2, .face-5 .d4, .face-5 .d5,
+  .face-6 .d1, .face-6 .d3, .face-6 .d4, .face-6 .d6 { top: 10px; }
+  .face-2 .d2, .face-3 .d3,
+  .face-4 .d3, .face-4 .d4,
+  .face-5 .d4, .face-5 .d5,
+  .face-6 .d3, .face-6 .d6 { bottom: 10px; }
+  .face-2 .d1, .face-3 .d1,
+  .face-4 .d2, .face-4 .d4,
+  .face-5 .d2, .face-5 .d5,
+  .face-6 .d4, .face-6 .d6 { right: 10px; }
+  .face-2 .d2, .face-3 .d3,
+  .face-4 .d1, .face-4 .d3,
+  .face-5 .d1, .face-5 .d4,
+  .face-6 .d1, .face-6 .d3 { left: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- 骰子数量选择 -->
+  <div>
+    <div class="dice-count-label">选择骰子数量</div>
+    <div class="dice-count-buttons" id="countButtons">
+      <button class="count-btn" data-count="1">1</button>
+      <button class="count-btn" data-count="2">2</button>
+      <button class="count-btn" data-count="3">3</button>
+      <button class="count-btn" data-count="4">4</button>
+      <button class="count-btn active" data-count="5">5</button>
+      <button class="count-btn" data-count="6">6</button>
+    </div>
+  </div>
+
+  <!-- 骰子展示区 -->
+  <div class="dice-display" id="diceDisplay"></div>
+
+  <!-- 摇按钮 -->
+  <div class="roll-section">
+    <button class="roll-btn" id="rollBtn">
+      <span class="roll-text">摇!</span>
+    </button>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const countButtons = document.getElementById('countButtons');
+  const diceDisplay = document.getElementById('diceDisplay');
+  const rollBtn = document.getElementById('rollBtn');
+
+  let diceCount = 5;
+  let isRolling = false;
+  let audioCtx = null;
+
+  // 初始化音频上下文(需要用户交互后才能创建)
+  function getAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+  }
+
+  // 播放一次骰子碰撞音(短促的"咔嗒"声)
+  function playDiceTick() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+
+    // 噪声缓冲 - 模拟骰子撞击的短促噪声
+    const bufferSize = ctx.sampleRate * 0.04; // 40ms
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      // 白噪声 + 快速衰减包络
+      const t = i / bufferSize;
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3);
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    // 带通滤波器，模拟骰子碰撞的频率特征
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1800 + Math.random() * 1200; // 随机变化频率
+    filter.Q.value = 1.5;
+
+    // 增益控制
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    noise.start(now);
+    noise.stop(now + 0.04);
+  }
+
+  // 每个点数对应的3D旋转角度
+  const faceRotations = {
+    1: { rx: 0,   ry: 0 },
+    2: { rx: 0,   ry: -90 },
+    3: { rx: -90, ry: 0 },
+    4: { rx: 90,  ry: 0 },
+    5: { rx: 0,   ry: 90 },
+    6: { rx: 0,   ry: 180 }
+  };
+
+  // 面的位置和点数对应关系
+  const faceData = [
+    { pos: 'front',  dots: 1 },
+    { pos: 'back',   dots: 6 },
+    { pos: 'right',  dots: 2 },
+    { pos: 'left',   dots: 5 },
+    { pos: 'top',    dots: 3 },
+    { pos: 'bottom', dots: 4 }
+  ];
+
+  // 生成点数圆点HTML
+  function dotsHTML(n) {
+    let html = '';
+    for (let i = 1; i <= n; i++) {
+      html += `<div class="dot d${i}"></div>`;
+    }
+    return html;
+  }
+
+  // 生成单个骰子HTML
+  function createDiceHTML() {
+    let html = '<div class="dice-scene"><div class="dice">';
+    faceData.forEach(f => {
+      html += `<div class="face face-${f.pos} face-${f.dots}">${dotsHTML(f.dots)}</div>`;
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  // 渲染所有骰子
+  function renderDice() {
+    diceDisplay.innerHTML = '';
+
+    if (diceCount === 5) {
+      // 上排2个 + 下排3个
+      const row1 = document.createElement('div');
+      row1.style.cssText = 'display:flex;justify-content:center;gap:20px;width:100%;';
+      const row2 = document.createElement('div');
+      row2.style.cssText = 'display:flex;justify-content:center;gap:20px;width:100%;';
+
+      for (let i = 0; i < 2; i++) {
+        row1.innerHTML += createDiceHTML();
+      }
+      for (let i = 0; i < 3; i++) {
+        row2.innerHTML += createDiceHTML();
+      }
+
+      diceDisplay.appendChild(row1);
+      diceDisplay.appendChild(row2);
+    } else {
+      for (let i = 0; i < diceCount; i++) {
+        diceDisplay.innerHTML += createDiceHTML();
+      }
+    }
+  }
+
+  // 设置某个骰子显示指定点数
+  function setDiceFace(index, value) {
+    const diceEl = diceDisplay.querySelectorAll('.dice')[index];
+    if (!diceEl) return;
+    const rot = faceRotations[value];
+    diceEl.style.transform = `rotateX(${rot.rx}deg) rotateY(${rot.ry}deg)`;
+  }
+
+  // 随机生成最终结果
+  function getRandomResults() {
+    const results = [];
+    for (let i = 0; i < diceCount; i++) {
+      results.push(Math.floor(Math.random() * 6) + 1);
+    }
+    return results;
+  }
+
+  // 摇骰子！
+  function rollDice() {
+    if (isRolling) return;
+    isRolling = true;
+    rollBtn.disabled = true;
+
+    const results = getRandomResults();
+    const diceEls = [...diceDisplay.querySelectorAll('.dice')];
+    const scenes = [...diceDisplay.querySelectorAll('.dice-scene')];
+
+    // 先立即随机切一次，避免50ms空隙看到1点
+    diceEls.forEach(dice => {
+      const randomVal = Math.floor(Math.random() * 6) + 1;
+      const rot = faceRotations[randomVal];
+      dice.style.transform = `rotateX(${rot.rx}deg) rotateY(${rot.ry}deg)`;
+    });
+    playDiceTick(); // 首帧音效
+
+    // 进入滚动状态(启用快速transition)
+    diceEls.forEach(d => d.classList.add('rolling'));
+
+    const totalDuration = 1000;
+    const tickInterval = 50;
+    let elapsed = tickInterval; // 上面已经执行了一次
+
+    const rollTimer = setInterval(() => {
+      elapsed += tickInterval;
+
+      diceEls.forEach(dice => {
+        const randomVal = Math.floor(Math.random() * 6) + 1;
+        const rot = faceRotations[randomVal];
+        dice.style.transform = `rotateX(${rot.rx}deg) rotateY(${rot.ry}deg)`;
+      });
+      playDiceTick(); // 每次切换画面同步播放音效
+
+      if (elapsed >= totalDuration) {
+        clearInterval(rollTimer);
+
+        // 去掉滚动状态
+        diceEls.forEach(d => d.classList.remove('rolling'));
+
+        // 定格在最终结果
+        diceEls.forEach((dice, i) => {
+          const rot = faceRotations[results[i]];
+          dice.style.transform = `rotateX(${rot.rx}deg) rotateY(${rot.ry}deg)`;
+        });
+
+        // 弹跳效果放在外层scene上，不影响dice的transform
+        scenes.forEach(s => {
+          s.classList.add('bounce');
+          setTimeout(() => s.classList.remove('bounce'), 350);
+        });
+
+        isRolling = false;
+        rollBtn.disabled = false;
+      }
+    }, tickInterval);
+  }
+
+  // === 事件绑定 ===
+  countButtons.addEventListener('click', e => {
+    const btn = e.target.closest('.count-btn');
+    if (!btn || isRolling) return;
+
+    countButtons.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    diceCount = parseInt(btn.dataset.count);
+    renderDice();
+  });
+
+  rollBtn.addEventListener('click', rollDice);
+
+  // 初始化
+  renderDice();
+})();
+</script>
+</body>
+</html>
