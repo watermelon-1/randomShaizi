@@ -20,10 +20,11 @@ body {
   width: 100%;
   max-width: 500px;
   padding: 20px;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 30px;
+  gap: 24px;
 }
 
 /* ====== 骰子数量选择区 ====== */
@@ -41,11 +42,12 @@ body {
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
+  max-width: 340px;
 }
 
 .count-btn {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
   border: 2px solid rgba(255, 215, 0, 0.4);
   background: rgba(255, 255, 255, 0.08);
@@ -283,6 +285,35 @@ body {
 
 /* ====== 响应式 ====== */
 @media (max-width: 420px) {
+  .container {
+    gap: 18px;
+    padding: 16px 12px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 10px) + 10px);
+  }
+
+  .dice-count-label {
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+
+  .count-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 17px;
+    border-radius: 10px;
+    gap: 6px;
+  }
+
+  .dice-count-buttons {
+    max-width: 300px;
+    gap: 7px;
+  }
+
+  .dice-display {
+    gap: 10px;
+    min-height: 140px;
+    padding: 10px;
+  }
   .dice-scene, .dice, .face {
     width: 70px;
     height: 70px;
@@ -297,23 +328,6 @@ body {
   .roll-btn { width: 120px; height: 120px; }
   .roll-text { font-size: 52px; }
   .dice-display { gap: 12px; }
-  .face-2 .d1, .face-2 .d2,
-  .face-3 .d1, .face-3 .d3,
-  .face-4 .d1, .face-4 .d2, .face-4 .d3, .face-4 .d4,
-  .face-5 .d1, .face-5 .d2, .face-5 .d4, .face-5 .d5,
-  .face-6 .d1, .face-6 .d3, .face-6 .d4, .face-6 .d6 { top: 10px; }
-  .face-2 .d2, .face-3 .d3,
-  .face-4 .d3, .face-4 .d4,
-  .face-5 .d4, .face-5 .d5,
-  .face-6 .d3, .face-6 .d6 { bottom: 10px; }
-  .face-2 .d1, .face-3 .d1,
-  .face-4 .d2, .face-4 .d4,
-  .face-5 .d2, .face-5 .d5,
-  .face-6 .d4, .face-6 .d6 { right: 10px; }
-  .face-2 .d2, .face-3 .d3,
-  .face-4 .d1, .face-4 .d3,
-  .face-5 .d1, .face-5 .d4,
-  .face-6 .d1, .face-6 .d3 { left: 10px; }
 }
 </style>
 </head>
@@ -400,17 +414,17 @@ body {
     noise.stop(now + 0.04);
   }
 
-  // 每个点数对应的3D旋转角度
+  // 每个点数对应的3D旋转角度（旋转后该点数的面正对用户）
   const faceRotations = {
-    1: { rx: 0,   ry: 0 },
-    2: { rx: 0,   ry: -90 },
-    3: { rx: -90, ry: 0 },
-    4: { rx: 90,  ry: 0 },
-    5: { rx: 0,   ry: 90 },
-    6: { rx: 0,   ry: 180 }
+    1: { rx: 0,   ry: 0 },     // front → 显示1
+    6: { rx: 0,   ry: 180 },   // back → 显示6
+    2: { rx: 0,   ry: -90 },   // right → 显示2 (从右侧转过来)
+    5: { rx: 0,   ry: 90 },    // left → 显示5 (从左侧转过来)
+    3: { rx: -90, ry: 0 },     // top → 显示3 (向下翻)
+    4: { rx: 90,  ry: 0 }      // bottom → 显示4 (向上翻)
   };
 
-  // 面的位置和点数对应关系
+  // 6个面的位置和各自对应的点数（标准骰子：对角之和=7）
   const faceData = [
     { pos: 'front',  dots: 1 },
     { pos: 'back',   dots: 6 },
@@ -446,9 +460,9 @@ body {
     if (diceCount === 5) {
       // 上排2个 + 下排3个
       const row1 = document.createElement('div');
-      row1.style.cssText = 'display:flex;justify-content:center;gap:20px;width:100%;';
+      row1.style.cssText = 'display:flex;justify-content:center;gap:14px;width:100%;';
       const row2 = document.createElement('div');
-      row2.style.cssText = 'display:flex;justify-content:center;gap:20px;width:100%;';
+      row2.style.cssText = 'display:flex;justify-content:center;gap:14px;width:100%;';
 
       for (let i = 0; i < 2; i++) {
         row1.innerHTML += createDiceHTML();
